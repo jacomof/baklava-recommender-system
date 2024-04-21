@@ -1,11 +1,15 @@
 import networkx as nx
 import os
+import random
+
+class NetworkNotReadError(Exception):
+    pass
 
 class Recommender:
     
     def __init__(self):
         self.DEFAULT_DATA_FOLDER = "./networks"
-    
+
     def read_pajek(self, filename, label_parser = None):
 
         """
@@ -35,12 +39,12 @@ class Recommender:
                 {"label": lab} if val is None else {"label": lab, "value": val}
 
         with open(os.path.join(self.DEFAULT_DATA_FOLDER,  f"{filename}.net"), encoding="UTF-8") as file:
-            file.readline() # skip header
-            nodes = [] # OPT pre-allocate given header
+            file.readline()
+            nodes = []
 
             for line in file:
                 if line.startswith("*"):
-                    match line.split()[0][1:]: # TODO extract m for optional progressbar
+                    match line.split()[0][1:]:
                         case "edges": G = nx.MultiGraph(name=filename)
                         case "arcs": G = nx.MultiDiGraph(name=filename)
                         case link_type: raise SyntaxError(f"invalid link type: {link_type}")
@@ -60,7 +64,8 @@ class Recommender:
                 i, j = (int(x) - 1 for x in line.split()[:2])
                 G.add_edge(i, j)
 
-        return G
+        self.G =  G
+        return self
     
     def find_node(self, G: nx.Graph, label: str):
         
@@ -79,7 +84,6 @@ class Recommender:
         --------
         node_id : node identifier
             The identifier of the node (typically node index) that matches the given label."""
-            
         for i, data in G.nodes(data=True):
             if data['label'] == label:
                 return i
@@ -117,7 +121,7 @@ class Recommender:
             P = U
         return {i: P[i] for i in range(len(P))}
 
-    def top_nodes(self, G: nx.Graph, C: dict[any, float], centrality: str, label, n=10) -> list[any]:
+    def top_nodes(self, G: nx.Graph, C: dict[any, float], centrality: str, labels, n=10) -> list[any]:
         
         """ 
         Find and print the top 'n' nodes in a NetworkX graph based on a specified centrality measure.
@@ -143,8 +147,8 @@ class Recommender:
             A list containing the identifiers of the top 'n' nodes based on the specified centrality measure."""
             
         nodes = []
-        for i, c in sorted(C.items(), key=lambda item: (item[1], G.degree[item[0]]), reverse=True):
-            if not (G.nodes[i]['label'].startswith('m-')) and (G.nodes[i]['label'] != label):
+        for i, _ in sorted(C.items(), key=lambda item: (item[1], G.degree[item[0]]), reverse=True):
+            if not (G.nodes[i]['label'].startswith('m-')) and (G.nodes[i]['label'] not in labels):
                 nodes.append(G.nodes[i]['label'])
                 n -= 1
                 if n == 0:
@@ -152,7 +156,7 @@ class Recommender:
                 
         return nodes
 
-    def get_recommendations(self, G, label, alpha = 0.85, eps = 1e-3, k = 10):
+    def get_recommendations(self, label, alpha = 0.85, eps = 1e-3, k = 10):
         """
         Get top node recommendations based on PageRank centrality scores in a NetworkX graph.
 
@@ -161,7 +165,7 @@ class Recommender:
         G : nx.Graph
             The NetworkX graph from which recommendations will be generated.
 
-        label : str
+        label : set
             The label of the node for which recommendations are sought.
 
         alpha : float, optional
@@ -176,17 +180,59 @@ class Recommender:
         Returns:
         --------
         recommendations : List[Any]
-            A list of recommended nodes based on PageRank centrality scores."""
+            A list of recommended nodes based on PageRank centrality scores.
+            
+        Raises:
+        -------
+        NetworkNotReadError: If no network file read before using get_recommendations method.
+        """
         
-        teleport_node = self.find_node(G = G, label = label)
-        pagerank = self.pagerank(G = G, alpha = alpha, eps = eps, teleport = {teleport_node})
-        recommendations = self.top_nodes(G = G, C = pagerank, centrality = 'pagerank', n = k, label = label)
-        
+        if not hasattr(self, 'G'):
+            raise NetworkNotReadError("No network file read before using get_recommendations method.")
+        G = self.G
+        teleport_nodes = set([self.find_node(G = G, label = n) for n in label])
+        pagerank = self.pagerank(G = G, alpha = alpha, eps = eps, teleport = teleport_nodes)
+        recommendations = self.top_nodes(G = G, C = pagerank, centrality = 'pagerank', n = k, labels = label)
         return recommendations
+
+
     
+    def get_category_list(self, G):
+        """
+        Get the list of categories in the graph.
+        
+        Parameters:
+        -----------
+        G : nx.Graph
+            The NetworkX graph from which recommendations will be generated.
+        
+        Returns:
+        --------
+        categories : List[str]
+            A list of categories in the graph."""
+        categories = [n[1]['label'].replace('-m', '') for n in G.nodes(data=True)]
+        categories = set(categories)
+        return categories
+    
+    def get_random_list(self, G, k=10):
+        """
+        Get the list of random nodes in the graph.
+        
+        Parameters:
+        -----------
+        G : nx.Graph
+            The NetworkX graph from which recommendations will be generated.
+        
+        Returns:
+        --------
+        randoms : List[str]
+            A list of random nodes in the graph."""
+        node_list = [n[1]['label'] for n in G.nodes(data=True) if not n[1]['label'].startswith('m-')]
+        randoms = random.sample(node_list, k)
+        return randoms
     
 if __name__ == '__main__':
     rec = Recommender()
-    G = rec.read_pajek('movies_graph.net')
-    recommendations = rec.get_recommendations(G, 'Moana')
+    rec.read_pajek('movies_graph.net')
+    recommendations = rec.get_recommendations(rec.G, 'Moana')
     print(recommendations)
