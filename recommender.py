@@ -148,7 +148,7 @@ class Recommender:
             
         nodes = []
         for i, _ in sorted(C.items(), key=lambda item: (item[1], G.degree[item[0]]), reverse=True):
-            if not (G.nodes[i]['label'].startswith('m-')) and (G.nodes[i]['label'] not in labels):
+            if not (G.nodes[i]['label'].startswith('m-')) and not (G.nodes[i]['label'] in labels):
                 nodes.append(G.nodes[i]['label'])
                 n -= 1
                 if n == 0:
@@ -210,9 +210,8 @@ class Recommender:
         --------
         categories : List[str]
             A list of categories in the graph."""
-        categories = [n[1]['label'].replace('-m', '') for n in G.nodes(data=True)]
-        categories = set(categories)
-        return categories
+        categories = [n[1]['label'] for n in G.nodes(data=True)]
+        return set(categories)
     
     def get_random_list(self, G, k=10):
         """

@@ -4,34 +4,25 @@ from langchain_community.llms import Ollama
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# session state
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
-
-st.set_page_config(page_title="Streaming Chatbot", page_icon="🤖")
-st.title("Baklava Film  Gourmet")
+import streamlit.components.v1 as components
 
 def get_response(movie, chat_history = None, query = None):
+    """Get response from the chatbot.
+    """
     if query == None:
         template = f"""
-            You are a movie enthusiast who watched all of the movies on the internet. I want you to provide information about the movies.
+        You are a movie enthusiast who watched all of the movies. I want you to provide a short paragraph about the movies.
+          If the user asks about a movie, provide short paragraph information about the movie. If the user question is not cannot be
+          answered using the information provided, please provide a response that 'I am  really sorry but I don't have that information'.
             
-            Chat history: You are a movie enthusiast who almost watched all the mvoies available.You are going to answer any questions about movies.
-            User question: Search internet to find general information about the movie which is called {movie}.
+            Chat history: You are a movie enthusiast who almost watched all the movies available.You are going to answer any questions about movies.
+            User question: Provide information about a movie called {movie}.
                     Highlight the IMDB score for this movie, which actors plays in this movie, when was the release year of the movie,
                     original language of the movie, motion picture association film rating system rating for this movie.
         """
 
     else:
-        template = """
-        You are a movie enthusiast who watched all of the movies on the internet. I want you to provide information about the movies.
-        
+        template = """        
         Chat history: {chat_history}
         User question: {user_question}
     
@@ -49,26 +40,31 @@ def get_response(movie, chat_history = None, query = None):
     )
 
 
-movie = MOVIE_NAME_FROM_BUTTON
+def chatbot(movie):
+    """Chatbot for the movie recommendation system.
+    """
 
-if len(st.session_state.chat_history) == 0:
-    st.session_state.chat_history.append(f"""Search internet to find general information about the movie which is called {movie}.
-            Highlight the IMDB score for this movie, which actors plays in this movie, when was the release year of the movie,
-            original language of the movie, motion picture association film rating system rating for this movie.""")
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
 
-    with st.chat_message("AI"):
-        ai_response = get_response(movie)
-        st.write_stream(ai_response)
-    
-user_query = st.chat_input("Type your message here...")
-if user_query is not None and user_query != "":
-    st.session_state.chat_history.append(HumanMessage(user_query))
+    if len(st.session_state.chat_history) == 0:
+        st.session_state.chat_history.append(f"""Provide information about a movie called {movie}.
+                    Highlight the IMDB score for this movie, which actors plays in this movie, when was the release year of the movie,
+                    original language of the movie, motion picture association film rating system rating for this movie.""")
 
-    with st.chat_message("Human"):
-        st.markdown(user_query)
+        with st.chat_message("AI"):
+            ai_response = get_response(movie)
+            st.write_stream(ai_response)
+        
+    user_query = st.chat_input("Type your message here...")
+    if user_query is not None and user_query != "":
+        st.session_state.chat_history.append(HumanMessage(user_query))
 
-    with st.chat_message("AI"):
-        ai_response = get_response(movie, user_query, st.session_state.chat_history)
-        st.write_stream(ai_response)
+        with st.chat_message("Human"):
+            st.markdown(user_query)
 
-    st.session_state.chat_history.append(AIMessage(ai_response))
+        with st.chat_message("AI"):
+            ai_response = get_response(movie, user_query, st.session_state.chat_history)
+            st.write_stream(ai_response)
+
+        st.session_state.chat_history.append(AIMessage(ai_response))
