@@ -8,10 +8,9 @@ Try it out for yourself, you won't regret it ;).
 ## Installation
 - Download the repository.
 - It's recommended to create a dedicated conda or virtual environment to avoid dependency conflicts:
-```
-python -m venv /path/to/new/virtual/environment
-```
-- Inside its directory run:
+```python -m venv /path/to/new/virtual/environment```
+- Activate the environment. In Unix/MacOS systems execute ```source /path/to/new/virtual/environment/bin/activate```. In Windows, you can do the same in the command prompt or a shell with ```C:\path\to\new\environment\Scripts\activate```.
+- Inside the repository's directory run:
 ```
 pip install -r requirements.txt
 ```
