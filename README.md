@@ -1,5 +1,5 @@
 # baklava-recommender-system
-A simple recommender system that allows users to explore movies and videogames from different categories using a web interface.
+An LLM based recommender system that allows users to explore movies and videogames from different categories using a web interface.
 Try it out for yourself, you won't regret it ;).
 ## Requirements
 - Python > 3.8.
